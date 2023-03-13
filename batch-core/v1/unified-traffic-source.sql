@@ -104,7 +104,6 @@ SELECT
 	b.rotid,
 	b.mpx_chnl_id,
 	b.url,
-	a.url as first_url,
 	null as mppid,
 	a.page_name,
 	a.referer

@@ -2,22 +2,7 @@
 -- Only Page events: Surface also tracks modules and clicks, but traffic source doesn't need those events
 -- Only non-native events: Surface native data is from batchtrack, which is duplicate to UBI data, and Surface hasn't stored all payload tags
 -- Valid page events: non-iframe pages
-/*
-drop table if exists ts_surface;
-CREATE TABLE `default`.`ts_surface` (
-  `global_session_id` STRING,
-  `source` STRING,
-  `source_session_skey` BIGINT,
-  `guid` STRING,
-  `SESSION_ID` BIGINT,
-  `PAGE_ID` STRING,
-  `PAGE_NAME` STRING,
-  `EVENT_TIMESTAMP` BIGINT,
-  `REFERER` STRING,
-  `url` STRING)
-USING parquet;
-*/
-insert into table ts_surface (
+insert overwrite table ts_surface
 select d.global_session_id, d.source, d.source_session_skey, c.*
 from
 	(select GUID, SESSION_ID, a.PAGE_ID, b.PAGE_NAME, EVENT_TIMESTAMP, REFERER, PAGE_URL as URL
@@ -25,36 +10,19 @@ from
 	inner join ACCESS_VIEWS.PAGES b
 	on a.dt BETWEEN '2023-02-05' and '2023-02-06' and a.EXPERIENCE <> 'native' and b.IFRAME = 0 and a.PAGE_ID = b.PAGE_ID) c
 inner join ubi_t.unified_session_map d
-on d.dt = 20230205 and d.source = 'Surface' and c.guid = d.guid and c.session_id = d.source_session_skey
-);
+on d.dt = 20230205 and d.source = 'Surface' and c.guid = d.guid and c.session_id = d.source_session_skey;
 
 -- Prepare UBI events
 -- Valid page events: non-iframe pages
-/*
-drop table if exists ts_ubi;
-CREATE TABLE `default`.`ts_ubi` (
-  `global_session_id` STRING,
-  `source` STRING,
-  `source_session_skey` BIGINT,
-  `guid` STRING,
-  `SESSION_SKEY` BIGINT,
-  `PAGE_ID` INT,
-  `PAGE_NAME` STRING,
-  `EVENT_TIMESTAMP` TIMESTAMP,
-  `REFERER` STRING,
-  `url` STRING)
-USING parquet;
-*/
-insert into table ts_ubi (
+insert overwrite table ts_ubi
 select d.global_session_id, d.source, d.source_session_skey, c.*
 from
 	(select GUID, SESSION_SKEY, a.PAGE_ID, b.PAGE_NAME, EVENT_TIMESTAMP, coalesce(REFERRER, soj_nvl(soj, 'ref')) as referer, URL_QUERY_STRING as URL
 	from UBI_V.UBI_EVENT a
 	inner join ACCESS_VIEWS.PAGES b
-	on a.SESSION_START_DT BETWEEN '2023-02-05' AND '2023-02-06' and b.IFRAME = 0 and a.PAGE_ID = b.PAGE_ID) c
+	on a.SESSION_START_DT BETWEEN '2023-02-05' AND '2023-02-06' and (sojlib.soj_nvl(soj, 'rdt') is null or sojlib.soj_nvl(soj, 'rdt') = 0) and b.IFRAME = 0 and a.PAGE_ID = b.PAGE_ID) c
 inner join ubi_t.unified_session_map d
-on d.dt = 20230205 and d.source = 'Ubi' and c.guid = d.guid and c.session_skey = d.source_session_skey
-);
+on d.dt = 20230205 and d.source = 'Ubi' and c.guid = d.guid and c.session_skey = d.source_session_skey;
 
 -- Prepare DeeplinkAction events
 -- Referer fallback: Some native page events has no referer, but DeeplinkAction page records the real referer
@@ -297,8 +265,9 @@ SELECT
     AND page_name = 'Home Page' THEN 'Organic: Nav Search: Free'
     WHEN referer LIKE '%ebay%' THEN 'Organic: Direct: On eBay'
     WHEN (
-      referer regexp '%facebook%' OR referer LIKE '%twitter%' OR referer LIKE '%pinterest%' OR referer LIKE '%instagram%' OR referer LIKE '%linkedin%' OR referer LIKE '%t.co%'
+      referer LIKE '%facebook%' OR referer LIKE '%twitter%' OR referer LIKE '%pinterest%' OR referer LIKE '%instagram%' OR referer LIKE '%linkedin%' OR referer LIKE '%t.co%'
     ) THEN 'Free: Free Social'
+	  WHEN referer LIKE '%youtube%' THEN 'Free: Free Social'
     WHEN referer LIKE '%mail%' THEN 'Organic: Txn Comms: Webmail w/o tracking'
     WHEN referer IS NULL OR referer = 'null' THEN 'Organic: Direct: No referer'
     WHEN referer IS NOT NULL THEN 'Free: Other'

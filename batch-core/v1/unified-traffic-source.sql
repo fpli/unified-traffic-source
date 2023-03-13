@@ -193,8 +193,9 @@ SELECT
     AND page_name = 'Home Page' THEN 'Organic: Nav Search: Free'
     WHEN referer LIKE '%ebay%' THEN 'Organic: Direct: On eBay'
     WHEN (
-      referer regexp '%facebook%' OR referer LIKE '%twitter%' OR referer LIKE '%pinterest%' OR referer LIKE '%instagram%' OR referer LIKE '%linkedin%' OR referer LIKE '%t.co%'
+      referer LIKE '%facebook%' OR referer LIKE '%twitter%' OR referer LIKE '%pinterest%' OR referer LIKE '%instagram%' OR referer LIKE '%linkedin%' OR referer LIKE '%t.co%'
     ) THEN 'Free: Free Social'
+    WHEN referer LIKE '%youtube%' THEN 'Free: Free Social'
     WHEN referer LIKE '%mail%' THEN 'Organic: Txn Comms: Webmail w/o tracking'
     WHEN referer IS NULL OR referer = 'null' THEN 'Organic: Direct: No referer'
     WHEN referer IS NOT NULL THEN 'Free: Other'

@@ -345,6 +345,3 @@ SELECT
   page_name,
   referer
 FROM unified_ts_2;
-
-
-

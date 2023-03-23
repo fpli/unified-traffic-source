@@ -490,7 +490,7 @@ from
      or (dt = '${dt_2}' and session_type = 'crossday'))) a
   join
   (select count(DISTINCT guid, GLOBAL_SESSION_ID) cnt
-   from ubi_w.uts_v2_unified_session_backup
+   from ubi_w.uts_v2_unified_session_copy
    where ((dt = '${dt_1}' and session_type = 'sameday')
      or (dt = '${dt_2}' and session_type = 'crossday'))) b;
 

@@ -482,14 +482,14 @@ WHERE ((a.dt = '${dt_1}' AND a.session_type = 'sameday')
 -- Check before generate done file
 --------------------------------------------------------------------------------
 
-select assert_true (a.cnt = b.cnt)
+select assert_true(a.cnt = b.cnt)
 from
-  (select count(DISTINCT guid, GLOBAL_SESSION_ID) cnt
+  (select count(1) cnt
    from ubi_t.unified_session
    where ((dt = '${dt_1}' and session_type = 'sameday')
      or (dt = '${dt_2}' and session_type = 'crossday'))) a
   join
-  (select count(DISTINCT guid, GLOBAL_SESSION_ID) cnt
+  (select count(1) cnt
    from ubi_w.uts_v2_unified_session_copy
    where ((dt = '${dt_1}' and session_type = 'sameday')
      or (dt = '${dt_2}' and session_type = 'crossday'))) b;
@@ -497,3 +497,4 @@ from
 --------------------------------------------------------------------------------
 -- [Placeholder] Generate done file
 --------------------------------------------------------------------------------
+

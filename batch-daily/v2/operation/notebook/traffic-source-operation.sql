@@ -1,6 +1,5 @@
 --------------------------------------------------------------------------------
 -- Pipeline operation cookbook
--- https://zeta.dss.vip.ebay.com/zeta/share/#/notebook?notebookId=99bca069-dd21-46d1-9c78-5eb82e7d7095
 --------------------------------------------------------------------------------
 
 -- %refresh_var(${UOW_FROM_DATE});
@@ -142,7 +141,9 @@ WHERE dt = '${dt_1}' and data_type = 'patch' AND session_type = 'sameday';
 -- change dt first before run the shell scripts
 -- operations/bin/uni_trfc_src_clean_swap_v1.sh
 
-
+--------------------------------------------------------------------------------
+-- 1.5 Set batch date and kick off
+--------------------------------------------------------------------------------
 
 --------------------------------------------------------------------------------
 -- 2. Rerun upstream unified session map and rerun the pipeline
@@ -155,6 +156,9 @@ WHERE dt = '${dt_1}' and data_type = 'patch' AND session_type = 'sameday';
 -- change dt first before run the shell scripts
 -- operations/bin/uni_trfc_src_clean_swap_v1.sh
 
+--------------------------------------------------------------------------------
+-- 2.2 Set batch date and kick off
+--------------------------------------------------------------------------------
 
 
 --------------------------------------------------------------------------------
@@ -289,3 +293,10 @@ WHERE dt = '${dt_1}' and data_type = 'patch' AND session_type = 'sameday';
 -- Apollo CLI
 -- change dt first before run the shell scripts
 -- operations/bin/uni_trfc_src_clean_swap_v1.sh
+
+--------------------------------------------------------------------------------
+-- 3.5 kick off
+-- Note that we do not need to set batch date since the pipeline failed
+-- and UOW was not updated
+--------------------------------------------------------------------------------
+

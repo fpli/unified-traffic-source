@@ -92,6 +92,31 @@ WHERE ((a.dt = '${dt_1}' AND a.session_type = 'sameday')
 group by dt, data_type, session_type;
 
 --------------------------------------------------------------------------------
+-- compare with clav session
+--------------------------------------------------------------------------------
+refresh table ubi_t.unified_session;
+select clav_traffic_source, unified_traffic_source, count(1)
+from
+	(select a.GUID, b.SOURCE_SESSION_SKEY, a.global_session_id, a.traffic_source.traffic_source_level3 as unified_traffic_source
+	from ubi_t.unified_session a
+	join ubi_t.unified_session_map b
+	on a.guid = b.guid and a.global_session_id = b.global_session_id
+	  and a.dt = '${dt_2}' and b.dt = '${dt_2}' and b.SOURCE = 'Ubi'
+	  and a.traffic_source.traffic_source_level3 is not null) c
+join
+	(SELECT GUID, session_skey,
+  		CASE
+    		WHEN traffic_source_level3 LIKE 'Paid: Paid Search%' THEN 'Paid: Paid Search'
+--     		WHEN traffic_source_level3 LIKE 'Organic: Txn Comms: Notifications%' OR traffic_source_level3 LIKE 'Free: Mktg Comms: Notifications%' THEN 'Notifications'
+    		WHEN traffic_source_level3 LIKE 'Free: Free Social%' THEN 'Free: Free Social'
+    		ELSE traffic_source_level3
+  		END AS clav_traffic_source
+	FROM access_views.clav_session_ext
+	where session_start_dt = '${dt_2_formated}') d
+on c.guid = d.guid and c.SOURCE_SESSION_SKEY = d.session_skey
+group by 1, 2;
+
+--------------------------------------------------------------------------------
 -- ubi_w.uts_unified_session_v1_no_trfc_src
 --------------------------------------------------------------------------------
 ALTER TABLE ubi_w.uts_unified_session_v1_no_trfc_src RECOVER PARTITIONS;

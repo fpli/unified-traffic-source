@@ -2,6 +2,7 @@
 -- Working tables:
 -- ubi_w.uts_v2_unified_session_copy
 -- ubi_w.uts_v2_surface_event
+-- ubi_w.uts_v2_distilled_ubi_event
 -- ubi_w.uts_v2_ubi_event
 -- ubi_w.uts_v2_deeplink_event
 -- ubi_w.uts_v2_first_valid_event
@@ -52,6 +53,43 @@ USING parquet
 OPTIONS (
   `compression` 'snappy')
 LOCATION 'viewfs://apollo-rno/sys/edw/working/ubi/ubi_w/soj/uts_v2_surface_event';
+
+drop table if exists ubi_w.uts_v2_distilled_ubi_event;
+CREATE TABLE ubi_w.uts_v2_distilled_ubi_event (
+  GUID string,
+  SESSION_SKEY bigint,
+  SEQNUM int,
+  SESSION_START_DT date,
+  CLICK_ID int,
+  SITE_ID int,
+  VERSION int,
+  PAGE_ID int,
+  PAGE_NAME string,
+  REFERER_HASH bigint,
+  EVENT_TIMESTAMP timestamp,
+  URL_QUERY_STRING string,
+  CLIENT_DATA string,
+  COOKIES string,
+  soj string,
+  WEB_SERVER string,
+  REFERRER string,
+  USER_ID string,
+  ITEM_ID bigint,
+  FLAGS string,
+  RDT int,
+  REGU int,
+  SQR string,
+  STATICPAGETYPE int,
+  RESERVEDFORFUTURE int,
+  EVENT_ATTR string,
+  CURRENT_IMPR_ID bigint,
+  SOURCE_IMPR_ID bigint,
+  SOJ_DATA_DT date,
+  TYPE string)
+USING parquet
+OPTIONS (
+  `compression` 'snappy')
+LOCATION 'viewfs://apollo-rno/sys/edw/working/ubi/ubi_w/soj/uts_v2_distilled_ubi_event';
 
 drop table if exists ubi_w.uts_v2_ubi_event;
 CREATE TABLE ubi_w.uts_v2_ubi_event (

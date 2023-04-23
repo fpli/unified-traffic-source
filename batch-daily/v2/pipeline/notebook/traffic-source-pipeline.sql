@@ -70,11 +70,26 @@ WHERE ((a.dt = '${dt_1}' AND a.session_type = 'sameday')
 --------------------------------------------------------------------------------
 
 --------------------------------------------------------------------------------
--- 1.1 Prepare valid events
+-- 1.1 Prepare distilled UBI events for performance tuning
+--------------------------------------------------------------------------------
+
+insert overwrite table ubi_w.uts_v2_distilled_ubi_event
+select a.*
+from UBI_V.UBI_EVENT a
+inner join ACCESS_VIEWS.PAGES b
+on a.PAGE_ID = b.PAGE_ID
+where a.SESSION_START_DT BETWEEN '${dt_2_formated}' and '${dt_1_formated}'
+and ((b.IFRAME = 0)
+  or (a.PAGE_ID = 2367320)
+  or (a.PAGE_ID = 2547208 or a.PAGE_ID = 2054060)
+  or (a.PAGE_ID = 2051248));
+
+--------------------------------------------------------------------------------
+-- 1.2 Prepare valid events
 --------------------------------------------------------------------------------
 
 --------------------------------------------------------------------------------
--- 1.1.1 Prepare Surface events
+-- 1.2.1 Prepare Surface events
 --------------------------------------------------------------------------------
 
 -- Prepare Surface events
@@ -93,7 +108,7 @@ on ((d.dt = '${dt_1}' AND d.session_type = 'sameday') or (d.dt = '${dt_2}' AND d
    and d.source = 'Surface' and c.guid = d.guid and c.session_id = d.source_session_skey;
 
 --------------------------------------------------------------------------------
--- 1.1.2 Prepare UBI events
+-- 1.2.2 Prepare UBI events
 --------------------------------------------------------------------------------
 
 -- Prepare UBI events
@@ -102,7 +117,7 @@ insert overwrite table ubi_w.uts_v2_ubi_event
 select d.global_session_id, d.source, d.source_session_skey, c.*
 from
 	(select GUID, SESSION_SKEY, a.PAGE_ID, b.PAGE_NAME, EVENT_TIMESTAMP, coalesce(REFERRER, soj_nvl(soj, 'ref')) as referer, URL_QUERY_STRING as URL
-	from UBI_V.UBI_EVENT a
+	from ubi_w.uts_v2_distilled_ubi_event a
 	inner join ACCESS_VIEWS.PAGES b
 	on a.SESSION_START_DT BETWEEN '${dt_2_formated}' and '${dt_1_formated}' and (sojlib.soj_nvl(soj, 'rdt') is null or sojlib.soj_nvl(soj, 'rdt') = 0) and b.IFRAME = 0 and a.PAGE_ID = b.PAGE_ID) c
 inner join ubi_t.unified_session_map d
@@ -110,7 +125,7 @@ on ((d.dt = '${dt_1}' AND d.session_type = 'sameday') or (d.dt = '${dt_2}' AND d
    and d.source = 'Ubi' and c.guid = d.guid and c.session_skey = d.source_session_skey;
 
 --------------------------------------------------------------------------------
--- 1.1.3 Prepare DeeplinkAction events
+-- 1.2.3 Prepare DeeplinkAction events
 --------------------------------------------------------------------------------
 
 -- Prepare DeeplinkAction events
@@ -129,7 +144,7 @@ from
 			SESSION_SKEY,
 			to_unix_timestamp(EVENT_TIMESTAMP) as EVENT_TIMESTAMP,
 			sojlib.soj_url_decode_escapes(soj_nvl(soj, 'ref'), '%') as referer
-		from UBI_V.UBI_EVENT
+		from ubi_w.uts_v2_distilled_ubi_event
 		where SESSION_START_DT BETWEEN '${dt_2_formated}' and '${dt_1_formated}'
 			and PAGE_ID = 2367320
 			and soj_nvl(soj, 'ref') is not null
@@ -141,7 +156,7 @@ from
 where rk = 1;
 
 --------------------------------------------------------------------------------
--- 1.1.4 Prepare first valid events
+-- 1.2.4 Prepare first valid events
 --------------------------------------------------------------------------------
 
 -- Prepare first valid events
@@ -166,7 +181,7 @@ left join ubi_w.uts_v2_deeplink_event b
 on a.guid = b.guid and a.global_session_id = b.global_session_id;
 
 --------------------------------------------------------------------------------
--- 1.2 Prepare UTP events
+-- 1.3 Prepare UTP events
 --------------------------------------------------------------------------------
 
 -- Prepare UTP events
@@ -194,7 +209,7 @@ from
 				end as chnl,
 				cast(soj_nvl(soj, 'rotid') as bigint) as rotid,
 				soj_url_decode_escapes(soj_nvl(soj, 'url_mpre'), '%') as url
-			from UBI_V.UBI_EVENT
+			from ubi_w.uts_v2_distilled_ubi_event
 			where SESSION_START_DT BETWEEN '${dt_2_formated}' and '${dt_1_formated}' and (PAGE_ID = 2547208 or (PAGE_ID = 2054060 and soj_nvl(soj, 'pnact') = '1'))) a
 		inner join ubi_t.unified_session_map b
 		on ((b.dt = '${dt_1}' AND b.session_type = 'sameday') or (b.dt = '${dt_2}' AND b.session_type = 'crossday'))
@@ -204,7 +219,7 @@ left join CHOCO_DATA_V.DW_MPX_ROTATIONS d
 on c.rotid = d.ROTATION_ID;
 
 --------------------------------------------------------------------------------
--- 1.3 Prepare IMBD events
+-- 1.4 Prepare IMBD events
 --------------------------------------------------------------------------------
 
 -- Prepare IMBD events
@@ -223,7 +238,7 @@ from
 			to_unix_timestamp(EVENT_TIMESTAMP) as EVENT_TIMESTAMP,
 			'Organic: IMBD' as chnl,
 			soj_nvl(soj, 'mppid') as mppid
-		from UBI_V.UBI_EVENT
+		from ubi_w.uts_v2_distilled_ubi_event
 		where SESSION_START_DT BETWEEN '${dt_2_formated}' and '${dt_1_formated}' and PAGE_ID = 2051248 and soj_nvl(soj, 'mppid') is not null and soj_nvl(soj, 'mppid') <> '') a
 	inner join ubi_t.unified_session_map b
 	on ((b.dt = '${dt_1}' AND b.session_type = 'sameday') or (b.dt = '${dt_2}' AND b.session_type = 'crossday'))

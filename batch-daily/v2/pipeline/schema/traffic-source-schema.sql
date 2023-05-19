@@ -165,6 +165,7 @@ CREATE TABLE ubi_w.uts_v2_imbd_event (
   chnl string,
   mppid string,
   rk int)
+USING parquet
 OPTIONS (
   `compression` 'snappy')
 LOCATION 'viewfs://apollo-rno/sys/edw/working/ubi/ubi_w/soj/uts_v2_imbd_event';

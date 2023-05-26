@@ -1,16 +1,15 @@
 #!/usr/bin/ksh -e
 #------------------------------------------------------------------------------------------------
 # Title:
-# File Name:    sg_ubi_data.tracking_events_daily_same_day_done_check.ksh
-# Description:  check if same_day done file is generated
-# Location:     Apollo-devour: /export/home/o_ubi/etl/shell/sg_ubi_data.tracking_events_daily_same_day_done_check.ksh
+# File Name:    sg_ubi_data.tracking_event_open_done_check.ksh
+# Description:  check if surface open done file is generated
+# Location:     Apollo-devour: /export/home/o_ubi/etl/shell/sg_ubi_data.tracking_event_open_done_check.ksh
 #
 # Revision History:
 #
 # Name             Date            Description
 # ---------------  --------------  ---------------------------------------------------
-# Lu Dongfang      2023-01-18      Initial Creation
-# Lu Dongfang      2023-02-08      Using UOW_FROM
+# Lu Dongfang      2023-02-08      Initial Creation
 #------------------------------------------------------------------------------------------------
 
 
@@ -23,7 +22,7 @@ re_run=0
 for i in {1..60}
 do
   re_run=0
-  folder="/apps/b_trk/tracking_events_daily_for_amp/dt=${run_dt}/_PARTLY_SUCCESS_ADD_PARTITION"
+  folder="/apps/b_trk/export_tmp_dir/open_session_event/dt=${run_dt}/_SUCCESS"
   current_time=`date '+%Y-%m-%d %H:%M:%S'`
   echo "current time: $current_time"
   set +e

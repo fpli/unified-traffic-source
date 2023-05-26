@@ -59,7 +59,7 @@
 --------------------------------------------------------------------------------
 -- Make a copy of unified session of t-1 sameday and t-2 crossday
 --------------------------------------------------------------------------------
-INSERT OVERWRITE TABLE ubi_w.uts_v2_unified_session_copy
+INSERT OVERWRITE TABLE ubi_w.uts_v2_unified_session_copy_qa
 SELECT *
 FROM ubi_t.unified_session a
 WHERE ((a.dt = '${dt_1}' AND (a.session_type = 'sameday' or a.session_type = 'open'))
@@ -74,7 +74,7 @@ WHERE ((a.dt = '${dt_1}' AND (a.session_type = 'sameday' or a.session_type = 'op
 -- 1.1 Prepare distilled UBI events for performance tuning
 --------------------------------------------------------------------------------
 
-insert overwrite table ubi_w.uts_v2_distilled_ubi_event
+insert overwrite table ubi_w.uts_v2_distilled_ubi_event_qa
 select a.*
 from UBI_V.UBI_EVENT a
 inner join ACCESS_VIEWS.PAGES b
@@ -105,7 +105,7 @@ OPTIONS (
   path "/apps/b_trk/export_tmp_dir/open_session_event/dt=${dt_1_formated}/*.parquet"
 );
 
-insert overwrite table ubi_w.uts_v2_surface_event
+insert overwrite table ubi_w.uts_v2_surface_event_qa
 select d.global_session_id, d.source, d.source_session_skey, c.*
 from
 	((select GUID, SESSION_ID, a.PAGE_ID, b.PAGE_NAME, EVENT_TIMESTAMP, REFERER, PAGE_URL as URL
@@ -127,11 +127,11 @@ on ((d.dt = '${dt_1}' AND (d.session_type = 'sameday' or d.session_type = 'open'
 
 -- Prepare UBI events
 -- Valid page events: non-iframe pages
-insert overwrite table ubi_w.uts_v2_ubi_event
+insert overwrite table ubi_w.uts_v2_ubi_event_qa
 select d.global_session_id, d.source, d.source_session_skey, c.*
 from
 	(select GUID, SESSION_SKEY, a.PAGE_ID, b.PAGE_NAME, EVENT_TIMESTAMP, coalesce(REFERRER, soj_nvl(soj, 'ref')) as referer, URL_QUERY_STRING as URL
-	from ubi_w.uts_v2_distilled_ubi_event a
+	from ubi_w.uts_v2_distilled_ubi_event_qa a
 	inner join ACCESS_VIEWS.PAGES b
 	on a.SESSION_START_DT BETWEEN '${dt_2_formated}' and '${dt_1_formated}' and (sojlib.soj_nvl(soj, 'rdt') is null or sojlib.soj_nvl(soj, 'rdt') = 0) and b.IFRAME = 0 and a.PAGE_ID = b.PAGE_ID) c
 inner join ubi_t.unified_session_map d
@@ -144,7 +144,7 @@ on ((d.dt = '${dt_1}' AND (d.session_type = 'sameday' or d.session_type = 'open'
 
 -- Prepare DeeplinkAction events
 -- Referer fallback: Some native page events has no referer, but DeeplinkAction page records the real referer
-insert overwrite table ubi_w.uts_v2_deeplink_event
+insert overwrite table ubi_w.uts_v2_deeplink_event_qa
 select *
 from
 	(select
@@ -158,7 +158,7 @@ from
 			SESSION_SKEY,
 			to_unix_timestamp(EVENT_TIMESTAMP) as EVENT_TIMESTAMP,
 			sojlib.soj_url_decode_escapes(soj_nvl(soj, 'ref'), '%') as referer
-		from ubi_w.uts_v2_distilled_ubi_event
+		from ubi_w.uts_v2_distilled_ubi_event_qa
 		where SESSION_START_DT BETWEEN '${dt_2_formated}' and '${dt_1_formated}'
 			and PAGE_ID = 2367320
 			and soj_nvl(soj, 'ref') is not null
@@ -174,7 +174,7 @@ where rk = 1;
 --------------------------------------------------------------------------------
 
 -- Prepare first valid events
-insert overwrite table ubi_w.uts_v2_first_valid_event
+insert overwrite table ubi_w.uts_v2_first_valid_event_qa
 select a.guid, a.global_session_id, a.source, a.PAGE_ID, a.PAGE_NAME, a.EVENT_TIMESTAMP, a.URL,
 	case when a.REFERER is not null and a.REFERER <> 'null' then a.REFERER
 		else b.REFERER
@@ -187,11 +187,11 @@ from
 	from
 		(select *, ROW_NUMBER() OVER (PARTITION BY guid, global_session_id ORDER BY EVENT_TIMESTAMP ASC) AS rk
 		from
-			(select guid, global_session_id, source, PAGE_ID, PAGE_NAME, CAST(EVENT_TIMESTAMP/1000 as bigint) as EVENT_TIMESTAMP, REFERER, URL from ubi_w.uts_v2_surface_event
+			(select guid, global_session_id, source, PAGE_ID, PAGE_NAME, CAST(EVENT_TIMESTAMP/1000 as bigint) as EVENT_TIMESTAMP, REFERER, URL from ubi_w.uts_v2_surface_event_qa
 			union all
-			select guid, global_session_id, source, PAGE_ID, PAGE_NAME, to_unix_timestamp(EVENT_TIMESTAMP) as EVENT_TIMESTAMP, REFERER, URL from ubi_w.uts_v2_ubi_event))
+			select guid, global_session_id, source, PAGE_ID, PAGE_NAME, to_unix_timestamp(EVENT_TIMESTAMP) as EVENT_TIMESTAMP, REFERER, URL from ubi_w.uts_v2_ubi_event_qa))
 	where rk = 1) a
-left join ubi_w.uts_v2_deeplink_event b
+left join ubi_w.uts_v2_deeplink_event_qa b
 on a.guid = b.guid and a.global_session_id = b.global_session_id;
 
 --------------------------------------------------------------------------------
@@ -200,8 +200,8 @@ on a.guid = b.guid and a.global_session_id = b.global_session_id;
 
 -- Prepare UTP events
 -- Including Chocolate Clicks and Push Notification Clicks
-refresh table ubi_w.uts_v2_utp_event;
-insert overwrite table ubi_w.uts_v2_utp_event
+refresh table ubi_w.uts_v2_utp_event_qa;
+insert overwrite table ubi_w.uts_v2_utp_event_qa
 select
 	c.*,
 	d.MPX_CHNL_ID
@@ -223,7 +223,7 @@ from
 				end as chnl,
 				cast(soj_nvl(soj, 'rotid') as bigint) as rotid,
 				soj_url_decode_escapes(soj_nvl(soj, 'url_mpre'), '%') as url
-			from ubi_w.uts_v2_distilled_ubi_event
+			from ubi_w.uts_v2_distilled_ubi_event_qa
 			where SESSION_START_DT BETWEEN '${dt_2_formated}' and '${dt_1_formated}' and (PAGE_ID = 2547208 or (PAGE_ID = 2054060 and soj_nvl(soj, 'pnact') = '1'))) a
 		inner join ubi_t.unified_session_map b
 		on ((b.dt = '${dt_1}' AND (b.session_type = 'sameday' or b.session_type = 'open')) or (b.dt = '${dt_2}' AND b.session_type = 'crossday'))
@@ -237,7 +237,7 @@ on c.rotid = d.ROTATION_ID;
 --------------------------------------------------------------------------------
 
 -- Prepare IMBD events
-insert overwrite table ubi_w.uts_v2_imbd_event
+insert overwrite table ubi_w.uts_v2_imbd_event_qa
 select *
 from
 	(select
@@ -252,7 +252,7 @@ from
 			to_unix_timestamp(EVENT_TIMESTAMP) as EVENT_TIMESTAMP,
 			'Organic: IMBD' as chnl,
 			soj_nvl(soj, 'mppid') as mppid
-		from ubi_w.uts_v2_distilled_ubi_event
+		from ubi_w.uts_v2_distilled_ubi_event_qa
 		where SESSION_START_DT BETWEEN '${dt_2_formated}' and '${dt_1_formated}' and PAGE_ID = 2051248 and soj_nvl(soj, 'mppid') is not null and soj_nvl(soj, 'mppid') <> '') a
 	inner join ubi_t.unified_session_map b
 	on ((b.dt = '${dt_1}' AND (b.session_type = 'sameday' or b.session_type = 'open')) or (b.dt = '${dt_2}' AND b.session_type = 'crossday'))
@@ -282,8 +282,8 @@ SELECT
 	null as mppid,
 	a.page_name,
 	a.referer
-FROM ubi_w.uts_v2_first_valid_event a
-LEFT JOIN ubi_w.uts_v2_utp_event b
+FROM ubi_w.uts_v2_first_valid_event_qa a
+LEFT JOIN ubi_w.uts_v2_utp_event_qa b
 ON
   -- 26, 27, 30 are Chocolate Message Center channels, they are on-ebay inbox mail traffic which will not be the traffic source
   b.chnl not in ('26', '27', '30')
@@ -365,10 +365,10 @@ SELECT
   a.referer
 FROM
   unified_ts_unknown a
-  LEFT JOIN ubi_w.uts_v2_imbd_event b ON a.global_session_id = b.global_session_id AND a.guid = b.guid
+  LEFT JOIN ubi_w.uts_v2_imbd_event_qa b ON a.global_session_id = b.global_session_id AND a.guid = b.guid
   	AND ABS(a.session_start_timestamp - b.event_timestamp) <= 600;
 
-insert overwrite TABLE ubi_w.uts_v2_traffic_source_1
+insert overwrite TABLE ubi_w.uts_v2_traffic_source_1_qa
 SELECT
   *
 FROM
@@ -384,7 +384,7 @@ FROM
 --------------------------------------------------------------------------------
 
 -- 4. Referer based traffic source
-insert overwrite TABLE ubi_w.uts_v2_traffic_source_2
+insert overwrite TABLE ubi_w.uts_v2_traffic_source_2_qa
 SELECT
   global_session_id,
   guid,
@@ -418,14 +418,14 @@ SELECT
     ELSE chnl
   END AS chnl
 FROM
-  ubi_w.uts_v2_traffic_source_1;
+  ubi_w.uts_v2_traffic_source_1_qa;
 
 --------------------------------------------------------------------------------
 -- 2.5 Final result
 --------------------------------------------------------------------------------
 
 -- 5. Final result
-insert overwrite TABLE ubi_w.uts_v2_unified_traffic_source
+insert overwrite TABLE ubi_w.uts_v2_unified_traffic_source_qa
 SELECT
   global_session_id,
   guid,
@@ -460,13 +460,13 @@ SELECT
   url,
   page_name,
   referer
-FROM ubi_w.uts_v2_traffic_source_2;
+FROM ubi_w.uts_v2_traffic_source_2_qa;
 
 --------------------------------------------------------------------------------
 -- Merge traffic source with unified session into a swap table
 --------------------------------------------------------------------------------
 
-INSERT OVERWRITE TABLE ubi_t.unified_session_swap
+INSERT OVERWRITE TABLE ubi_w.unified_session_swap_qa
 select
   b.guid,
   b.global_session_id,
@@ -487,43 +487,8 @@ select
   b.data_type,
   b.session_type
 from
-  (select * from ubi_w.uts_v2_unified_session_copy a
+  (select * from ubi_w.uts_v2_unified_session_copy_qa a
   where ((a.dt = '${dt_1}' AND (a.session_type = 'sameday' or a.session_type = 'open'))
       or (a.dt = '${dt_2}' AND a.session_type = 'crossday'))) b
-  left join ubi_w.uts_v2_unified_traffic_source c
+  left join ubi_w.uts_v2_unified_traffic_source_qa c
   on b.guid = c.guid and b.global_session_id = c.global_session_id;
-
---------------------------------------------------------------------------------
--- Backup before swap
---------------------------------------------------------------------------------
-
-INSERT OVERWRITE TABLE ubi_w.uts_v2_unified_traffic_source_backup
-SELECT *
-FROM ubi_t.unified_session_swap a
-WHERE ((a.dt = '${dt_1}' AND (a.session_type = 'sameday' or a.session_type = 'open'))
-  or (a.dt = '${dt_2}' AND a.session_type = 'crossday'));
-
---------------------------------------------------------------------------------
--- [Placeholder] move unified session with traffic source to target table
---------------------------------------------------------------------------------
-
---------------------------------------------------------------------------------
--- Check before generate done file
---------------------------------------------------------------------------------
-
-select assert_true(a.cnt = b.cnt)
-from
-  (select count(1) cnt
-   from ubi_t.unified_session
-   where ((dt = '${dt_1}' and (session_type = 'sameday' or session_type = 'open'))
-     or (dt = '${dt_2}' and session_type = 'crossday'))) a
-  join
-  (select count(1) cnt
-   from ubi_w.uts_v2_unified_session_copy
-   where ((dt = '${dt_1}' and (session_type = 'sameday' or session_type = 'open'))
-     or (dt = '${dt_2}' and session_type = 'crossday'))) b;
-
---------------------------------------------------------------------------------
--- [Placeholder] Generate done file
---------------------------------------------------------------------------------
-

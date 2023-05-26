@@ -31,7 +31,7 @@ re_run=0
 for i in {1..60}
 do
   re_run=0
-  folder="/apps/b_trk/tracking_events_daily/dt=${run_dt}/_SUCCESS_ADD_PARTITION"
+  folder="/apps/b_trk/tracking_events_daily_for_amp/dt=${run_dt}/_SUCCESS_ADD_PARTITION"
   current_time=`date '+%Y-%m-%d %H:%M:%S'`
   echo "current time: $current_time"
   set +e

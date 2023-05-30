@@ -66,9 +66,9 @@ from
 	from
 		(select *, ROW_NUMBER() OVER (PARTITION BY guid, global_session_id ORDER BY EVENT_TIMESTAMP ASC source DESC) AS rk
 		from
-			(select guid, global_session_id, source, PAGE_ID, PAGE_NAME, CAST(EVENT_TIMESTAMP/1000 as bigint) as EVENT_TIMESTAMP, REFERER, URL, 'Surface' as source from ts_surface
+			(select guid, global_session_id, source, PAGE_ID, PAGE_NAME, CAST(EVENT_TIMESTAMP/1000 as bigint) as EVENT_TIMESTAMP, REFERER, URL from ts_surface
 			union all
-			select guid, global_session_id, source, PAGE_ID, PAGE_NAME, to_unix_timestamp(EVENT_TIMESTAMP) as EVENT_TIMESTAMP, REFERER, URL, 'Ubi' as source from ts_ubi))
+			select guid, global_session_id, source, PAGE_ID, PAGE_NAME, to_unix_timestamp(EVENT_TIMESTAMP) as EVENT_TIMESTAMP, REFERER, URL from ts_ubi))
 	where rk = 1) a
 left join ts_deeplink b
 on a.guid = b.guid and a.global_session_id = b.global_session_id;

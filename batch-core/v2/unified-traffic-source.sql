@@ -64,7 +64,7 @@ select a.guid, a.global_session_id, a.source, a.PAGE_ID, a.PAGE_NAME, a.EVENT_TI
 from
 	(select guid, global_session_id, source, PAGE_ID, PAGE_NAME, EVENT_TIMESTAMP, REFERER, URL
 	from
-		(select *, ROW_NUMBER() OVER (PARTITION BY guid, global_session_id ORDER BY EVENT_TIMESTAMP ASC source DESC) AS rk
+		(select *, ROW_NUMBER() OVER (PARTITION BY guid, global_session_id ORDER BY EVENT_TIMESTAMP ASC, source DESC) AS rk
 		from
 			(select guid, global_session_id, source, PAGE_ID, PAGE_NAME, CAST(EVENT_TIMESTAMP/1000 as bigint) as EVENT_TIMESTAMP, REFERER, URL from ts_surface
 			union all

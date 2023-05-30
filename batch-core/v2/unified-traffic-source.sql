@@ -5,10 +5,10 @@
 insert overwrite table ts_surface
 select d.global_session_id, d.source, d.source_session_skey, c.*
 from
-	(select GUID, SESSION_ID, a.PAGE_ID, b.PAGE_NAME, EVENT_TIMESTAMP, REFERER, PAGE_URL as URL
-	from SURFACE_TRACKING.PAGE_TRACKING_EVENT_VIEW a
+	(select GUID, SESSIONID as SESSION_ID, b.PAGE_ID, b.PAGE_NAME, EVENTTIMESTAMP as EVENT_TIMESTAMP, REFERER, instanceId as URL
+	from SURFACE_TRACKING.auto_track_daily_events_without_combine a
 	inner join ACCESS_VIEWS.PAGES b
-	on a.dt BETWEEN '2023-02-05' and '2023-02-06' and a.EXPERIENCE <> 'native' and b.IFRAME = 0 and a.PAGE_ID = b.PAGE_ID) c
+	on a.dt BETWEEN '2023-02-05' AND '2023-02-06' and a.entity_type = 'Page' and b.IFRAME = 0 and a.entityId = b.PAGE_ID) c
 inner join ubi_t.unified_session_map d
 on d.dt = 20230205 and d.source = 'Surface' and c.guid = d.guid and c.session_id = d.source_session_skey;
 
@@ -64,11 +64,11 @@ select a.guid, a.global_session_id, a.source, a.PAGE_ID, a.PAGE_NAME, a.EVENT_TI
 from
 	(select guid, global_session_id, source, PAGE_ID, PAGE_NAME, EVENT_TIMESTAMP, REFERER, URL
 	from
-		(select *, ROW_NUMBER() OVER (PARTITION BY guid, global_session_id ORDER BY EVENT_TIMESTAMP ASC) AS rk
+		(select *, ROW_NUMBER() OVER (PARTITION BY guid, global_session_id ORDER BY EVENT_TIMESTAMP ASC source DESC) AS rk
 		from
-			(select guid, global_session_id, source, PAGE_ID, PAGE_NAME, CAST(EVENT_TIMESTAMP/1000 as bigint) as EVENT_TIMESTAMP, REFERER, URL from ts_surface
+			(select guid, global_session_id, source, PAGE_ID, PAGE_NAME, CAST(EVENT_TIMESTAMP/1000 as bigint) as EVENT_TIMESTAMP, REFERER, URL, 'Surface' as source from ts_surface
 			union all
-			select guid, global_session_id, source, PAGE_ID, PAGE_NAME, to_unix_timestamp(EVENT_TIMESTAMP) as EVENT_TIMESTAMP, REFERER, URL from ts_ubi))
+			select guid, global_session_id, source, PAGE_ID, PAGE_NAME, to_unix_timestamp(EVENT_TIMESTAMP) as EVENT_TIMESTAMP, REFERER, URL, 'Ubi' as source from ts_ubi))
 	where rk = 1) a
 left join ts_deeplink b
 on a.guid = b.guid and a.global_session_id = b.global_session_id;
@@ -290,12 +290,12 @@ SELECT
       -- whitelist of common misspellings and ebay subsidiary
       AND lower(replace(sojlib.soj_url_decode_escapes(parse_url(url, 'QUERY', 'keyword'), '%'), ' ', '')) REGEXP '(e[a|+|-|.]?bay)|eaby|eby|eba|kijiji'
     ) OR (mpx_chnl_id = '25') THEN 'Organic: Nav Search: Paid'
-	  WHEN mpx_chnl_id = '2' THEN 'Paid: Paid Search'
+	WHEN mpx_chnl_id = '2' THEN 'Paid: Paid Search'
     WHEN mpx_chnl_id = '6' THEN 'Paid: ePN'
     WHEN mpx_chnl_id = '36' THEN 'Free: SEO: Free Feeds'
     WHEN mpx_chnl_id = '1' THEN 'Paid: Display'
     WHEN mpx_chnl_id IN ('33', '35') THEN 'Paid: Paid Social'
-	  WHEN chnl = '16' THEN 'Free: Free Social'
+	WHEN chnl = '16' THEN 'Free: Free Social'
     WHEN chnl = '7' THEN 'Organic: Txn Comms: Site Email'
     WHEN chnl = '24' THEN 'Free: Mktg Comms: SMS'
     WHEN chnl = '8' THEN 'Free: Mktg Comms: Mktg Email'
@@ -303,7 +303,7 @@ SELECT
     WHEN chnl = '1' THEN 'Paid: ePN'
     WHEN chnl = '28' THEN 'Free: SEO: Free Feeds'
     WHEN chnl = '4' THEN 'Paid: Display'
-	  WHEN chnl = '2' THEN 'Paid: Paid Search'
+	WHEN chnl = '2' THEN 'Paid: Paid Search'
     ELSE chnl
   END AS traffic_source,
   session_start_timestamp,

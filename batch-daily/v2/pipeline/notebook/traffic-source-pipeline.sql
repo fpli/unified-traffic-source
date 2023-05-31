@@ -80,6 +80,7 @@ from UBI_V.UBI_EVENT a
 inner join ACCESS_VIEWS.PAGES b
 on a.PAGE_ID = b.PAGE_ID
 where a.SESSION_START_DT BETWEEN '${dt_2_formated}' and '${dt_1_formated}'
+and a.type != 'large'
 and ((b.IFRAME = 0)
   or (a.PAGE_ID = 2367320)
   or (a.PAGE_ID = 2547208 or a.PAGE_ID = 2054060)

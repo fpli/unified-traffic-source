@@ -109,15 +109,15 @@ OPTIONS (
 insert overwrite table ubi_w.uts_v2_surface_event
 select d.global_session_id, d.source, d.source_session_skey, c.*
 from
-	((select GUID, SESSION_ID, a.PAGE_ID, b.PAGE_NAME, EVENT_TIMESTAMP, REFERER, PAGE_URL as URL
-	from SURFACE_TRACKING.PAGE_TRACKING_EVENT_VIEW a
+	((select GUID, SESSIONID as SESSION_ID, b.PAGE_ID, b.PAGE_NAME, EVENTTIMESTAMP as EVENT_TIMESTAMP, REFERER, instanceId as URL
+	from SURFACE_TRACKING.auto_track_daily_events_without_combine a
 	inner join ACCESS_VIEWS.PAGES b
-	on a.dt BETWEEN '${dt_2_formated}' and '${dt_1_formated}' and a.EXPERIENCE <> 'native' and b.IFRAME = 0 and a.PAGE_ID = b.PAGE_ID)
+	on a.dt BETWEEN '${dt_2_formated}' and '${dt_1_formated}' and a.entity_type = 'Page' and b.IFRAME = 0 and a.entityId = b.PAGE_ID)
 	union all
 	(select GUID, sessionId as SESSION_ID, a.entityId as PAGE_ID, b.PAGE_NAME, eventTimestamp as EVENT_TIMESTAMP, REFERER, instanceId as URL
      from surface_event_open a
      inner join ACCESS_VIEWS.PAGES b on a.entityId = b.PAGE_ID
-     where a.entityType = 'Page' and a.EXPERIENCE <> 'native' and b.IFRAME = 0)) c
+     where a.entityType = 'Page' and b.IFRAME = 0)) c
 inner join ubi_t.unified_session_map d
 on ((d.dt = '${dt_1}' AND (d.session_type = 'sameday' or d.session_type = 'open')) or (d.dt = '${dt_2}' AND d.session_type = 'crossday'))
    and d.source = 'Surface' and c.guid = d.guid and c.session_id = d.source_session_skey;
@@ -186,7 +186,7 @@ select a.guid, a.global_session_id, a.source, a.PAGE_ID, a.PAGE_NAME, a.EVENT_TI
 from
 	(select guid, global_session_id, source, PAGE_ID, PAGE_NAME, EVENT_TIMESTAMP, REFERER, URL
 	from
-		(select *, ROW_NUMBER() OVER (PARTITION BY guid, global_session_id ORDER BY EVENT_TIMESTAMP ASC) AS rk
+		(select *, ROW_NUMBER() OVER (PARTITION BY guid, global_session_id ORDER BY EVENT_TIMESTAMP ASC, source DESC) AS rk
 		from
 			(select guid, global_session_id, source, PAGE_ID, PAGE_NAME, CAST(EVENT_TIMESTAMP/1000 as bigint) as EVENT_TIMESTAMP, REFERER, URL from ubi_w.uts_v2_surface_event
 			union all
@@ -438,12 +438,12 @@ SELECT
       -- whitelist of common misspellings and ebay subsidiary
       AND lower(replace(sojlib.soj_url_decode_escapes(parse_url(url, 'QUERY', 'keyword'), '%'), ' ', '')) REGEXP '(e[a|+|-|.]?bay)|eaby|eby|eba|kijiji'
     ) OR (mpx_chnl_id = '25') THEN 'Organic: Nav Search: Paid'
-	  WHEN mpx_chnl_id = '2' THEN 'Paid: Paid Search'
+	WHEN mpx_chnl_id = '2' THEN 'Paid: Paid Search'
     WHEN mpx_chnl_id = '6' THEN 'Paid: ePN'
     WHEN mpx_chnl_id = '36' THEN 'Free: SEO: Free Feeds'
     WHEN mpx_chnl_id = '1' THEN 'Paid: Display'
     WHEN mpx_chnl_id IN ('33', '35') THEN 'Paid: Paid Social'
-	  WHEN chnl = '16' THEN 'Free: Free Social'
+	WHEN chnl = '16' THEN 'Free: Free Social'
     WHEN chnl = '7' THEN 'Organic: Txn Comms: Site Email'
     WHEN chnl = '24' THEN 'Free: Mktg Comms: SMS'
     WHEN chnl = '8' THEN 'Free: Mktg Comms: Mktg Email'
@@ -451,7 +451,7 @@ SELECT
     WHEN chnl = '1' THEN 'Paid: ePN'
     WHEN chnl = '28' THEN 'Free: SEO: Free Feeds'
     WHEN chnl = '4' THEN 'Paid: Display'
-	  WHEN chnl = '2' THEN 'Paid: Paid Search'
+	WHEN chnl = '2' THEN 'Paid: Paid Search'
     ELSE chnl
   END AS traffic_source,
   session_start_timestamp,

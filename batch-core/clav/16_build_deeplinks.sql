@@ -36,7 +36,7 @@ CREATE TABLE p_soj_cl_t.temp_csess12b_v9 USING PARQUET AS
 SELECT
 	guid,
 	session_skey,
-	site_iD,
+	site_id,
 	session_start_dt,
 	ip,
 	COALESCE(signedin_user_id, mapped_user_id) as user_id,

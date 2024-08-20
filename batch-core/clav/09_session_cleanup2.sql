@@ -109,7 +109,7 @@ DROP TABLE IF EXISTS p_soj_cl_t.temp_csess9e_v9;
 CREATE TABLE p_soj_cl_t.temp_csess9e_v9 USING PARQUET AS
 SELECT
 	ip ,
-	LPAD(CONV(ARRAY_JOIN(TRANSFORM(SPLIT(ip,':'),x -> LPAD(x,4,'0')),''),16,10),39,'0') AS ip_dec ,
+	LPAD(CONV(ARRAY_JOIN(TRANSFORM(SPLIT(ip,':'), x -> LPAD(x, 4, '0')), ''), 16, 10), 39, '0') AS ip_dec,
 	COUNT(*) AS numrows
 FROM
 	p_soj_cl_t.temp_csess2a1_v9
@@ -118,17 +118,17 @@ WHERE
 	AND session_cntry_id IS NULL
 	AND sojlib.is_validIPv4(CAST(ip AS STRING)) = 0 /* non IPV4, although there might be some mixes IPV4/IPV6 but we just ignore them*/
 	AND LENGTH(REGEXP_REPLACE(ip, '[0-9:a-zA-Z]', '')) = 0 /* IPV6 */
-	AND SIZE(SPLIT(ip,':')) = 8 /* IPV6 */
+	AND SIZE(SPLIT(ip, ':')) = 8 /* IPV6 */
 GROUP BY 1,2；
 
 DROP TABLE IF EXISTS p_soj_cl_t.dw_zip_ipv6_dim;
 CREATE TABLE p_soj_cl_t.dw_zip_ipv6_dim USING PARQUET AS
 SELECT
-	ip_begin_addr_txt ,
-	LPAD(CONV(ARRAY_JOIN(TRANSFORM(SPLIT(ip_begin_addr_txt,':'),x -> LPAD(x,4,'0')),''),16,10),39,'0') AS ip_start ,
-	ip_end_ip_addr_txt ,
-	LPAD(CONV(ARRAY_JOIN(TRANSFORM(SPLIT(ip_end_ip_addr_txt,':'),x -> LPAD(x,4,'0')),''),16,10),39,'0') AS ip_end ,
-	two_char_cntry_cd ,
+	ip_begin_addr_txt,
+	LPAD(CONV(ARRAY_JOIN(TRANSFORM(SPLIT(ip_begin_addr_txt,':'),x -> LPAD(x,4,'0')),''),16,10),39,'0') AS ip_start,
+	ip_end_ip_addr_txt,
+	LPAD(CONV(ARRAY_JOIN(TRANSFORM(SPLIT(ip_end_ip_addr_txt,':'),x -> LPAD(x,4,'0')),''),16,10),39,'0') AS ip_end,
+	two_char_cntry_cd,
 	city_name
 FROM
 	access_views.dw_zip_ipv6_dim;
@@ -180,7 +180,11 @@ FROM
 			access_views.dw_countries
 	) cntry
 SET
-	t2a.session_rev_rollup = CASE WHEN t2a.session_cntry_id IS NULL OR t2a.session_cntry_id = -999 THEN 'UNKN' ELSE cntry.rev_rollup END
+	t2a.session_rev_rollup = CASE
+	                            WHEN t2a.session_cntry_id IS NULL OR t2a.session_cntry_id = -999
+	                                THEN 'UNKN'
+	                            ELSE cntry.rev_rollup
+	                         END
 WHERE
 	t2a.session_cntry_id = cntry.cntry_id AND t2a.session_rev_rollup IS NULL;
 

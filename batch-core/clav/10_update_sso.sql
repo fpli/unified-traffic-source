@@ -64,7 +64,7 @@ FROM
 SET
 	t2a.primary_app_id = t8b.app_id,
 	t2a.cobrand = 6,
-	t2a.session_details = COALESCE(t2a.session_details,'')|| '&sso=1'
+	t2a.session_details = COALESCE(t2a.session_details, '') || '&sso=1'
 WHERE
 	t2a.guid = t8b.guid AND t2a.session_skey = t8b.session_skey AND t2a.session_start_dt = t8b.session_start_dt
 	AND t2a.cobrand IN (6, 7)
